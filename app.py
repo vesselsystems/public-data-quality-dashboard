@@ -1,19 +1,40 @@
 """Streamlit entry point for the data-quality dashboard."""
 
+import json
 from pathlib import Path
 
 import plotly.express as px
 import streamlit as st
 
 from data_quality_dashboard.data import load_with_sql, yearly_summary
-from data_quality_dashboard.quality import quality_score, run_quality_checks
+from data_quality_dashboard.quality import (
+    quality_score,
+    run_quality_checks,
+    temperature_order_anomalies,
+)
 
-DATA_PATH = Path(__file__).parent / "data" / "raw" / "seattle_weather.csv"
+PROJECT_ROOT = Path(__file__).parent
+DATA_PATH = PROJECT_ROOT / "data" / "raw" / "seattle_weather.csv"
+PROVENANCE_PATH = PROJECT_ROOT / "data" / "raw" / "provenance.json"
 
 st.set_page_config(page_title="Public Data Quality Dashboard", page_icon="📊", layout="wide")
 
 st.title("Public Data Quality & EDA Dashboard")
 st.caption("A SQL-to-Python workflow: validate first, interpret second.")
+
+with st.sidebar:
+    st.subheader("Snapshot provenance")
+    if PROVENANCE_PATH.exists():
+        provenance = json.loads(PROVENANCE_PATH.read_text(encoding="utf-8"))
+        source = provenance["source"]
+        snapshot = provenance["local_snapshot"]
+        st.markdown(f"[{source['publisher']}]({source['url']})")
+        st.caption(f"Upstream revision: `{source['upstream_ref']}`")
+        st.caption(f"SHA-256: `{snapshot['sha256']}`")
+        st.caption(f"Retrieved: {snapshot['retrieved_at_utc'] or 'not recorded'}")
+        st.caption(source["license_or_terms"])
+    else:
+        st.warning("Provenance metadata is not available.")
 
 if not DATA_PATH.exists():
     st.error("The dataset has not been downloaded yet.")
@@ -22,12 +43,13 @@ if not DATA_PATH.exists():
 
 source_frame = load_with_sql(DATA_PATH)
 checks = run_quality_checks(source_frame)
+anomalies = temperature_order_anomalies(source_frame)
 score = quality_score(checks)
 # Keep validation tied to source order, then sort only the display data.
 frame = source_frame.sort_values("date", kind="stable").reset_index(drop=True)
 
 left, middle, right, far_right = st.columns(4)
-left.metric("Quality score", f"{score}%")
+left.metric("Core quality score", f"{score}%")
 middle.metric("Observations", f"{len(frame):,}")
 right.metric("Start date", str(frame["date"].min()))
 far_right.metric("End date", str(frame["date"].max()))
@@ -35,6 +57,10 @@ far_right.metric("End date", str(frame["date"].max()))
 st.write(
     "The dashboard makes source completeness and analytical assumptions visible before showing "
     "temperature trends."
+)
+st.caption(
+    "The score retains the original seven-check denominator; calendar coverage is a separate "
+    "supplemental check so the score's meaning remains comparable across runs."
 )
 
 tab_quality, tab_trends, tab_sql = st.tabs(["Quality checks", "EDA", "SQL summary"])
@@ -54,6 +80,23 @@ with tab_quality:
         "Checks are implemented in src/data_quality_dashboard/quality.py; chronology is checked "
         "before this display sort."
     )
+
+    st.subheader("Temperature-order anomaly review")
+    st.caption(
+        "These rows violate min ≤ mean ≤ max. They remain in the descriptive output; no values "
+        "are swapped, imputed, or excluded automatically."
+    )
+    if anomalies.empty:
+        st.success("No temperature-order anomalies found.")
+    else:
+        st.warning(f"{len(anomalies):,} rows require review.")
+        st.dataframe(anomalies, use_container_width=True, hide_index=True)
+        st.download_button(
+            "Download anomaly review CSV",
+            anomalies.to_csv(index=False),
+            file_name="temperature_order_anomalies.csv",
+            mime="text/csv",
+        )
 
 with tab_trends:
     st.subheader("Mean temperature over time")
@@ -76,6 +119,7 @@ with tab_sql:
     st.code(
         """
 SELECT
+    rowid + 1 AS source_row_number,
     TRY_CAST(Date AS DATE) AS date,
     TRY_CAST(Max_TemperatureC AS DOUBLE) AS max_temperature_c,
     TRY_CAST(Mean_TemperatureC AS DOUBLE) AS mean_temperature_c,
@@ -86,6 +130,7 @@ ORDER BY rowid;
         language="sql",
     )
     st.markdown(
-        "The full auditable quality query is in `sql/quality_checks.sql`. "
-        "DuckDB keeps the SQL step reproducible without requiring a separate database server."
+        "The full auditable quality query is in `sql/quality_checks.sql`; it includes the "
+        "calendar-coverage and temperature-order review queries. DuckDB keeps the SQL step "
+        "reproducible without requiring a separate database server."
     )

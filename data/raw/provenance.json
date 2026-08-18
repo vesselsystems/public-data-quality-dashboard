@@ -5,14 +5,16 @@
     "file": "2016-weather-data-seattle.csv",
     "url": "https://raw.githubusercontent.com/plotly/datasets/0c447c47b757ad74edecab31f0d72f849d2e67c2/2016-weather-data-seattle.csv",
     "upstream_ref": "0c447c47b757ad74edecab31f0d72f849d2e67c2",
-    "retrieval_script": "scripts/download_data.py"
+    "retrieval_script": "scripts/download_data.py",
+    "license_or_terms": "Not independently verified in this project; consult the publisher's repository terms before redistribution.",
+    "license_or_terms_url": "https://github.com/plotly/datasets"
   },
   "local_snapshot": {
     "path": "data/raw/seattle_weather.csv",
     "sha256": "2837c01b75e4dd0f8bd6810dca805a8ac42a4743bf019128366924ef3f857fdf",
     "size_bytes": 456160,
     "retrieved_at_utc": "2026-08-18T19:10:46.411065+00:00",
-    "metadata_generated_at_utc": "2026-08-18T19:10:46.482833+00:00",
+    "metadata_generated_at_utc": "2026-08-18T20:35:58.707074+00:00",
     "source_columns": [
       "Date",
       "Max_TemperatureC",
@@ -34,6 +36,16 @@
     "temperature_order_violations": 34,
     "temperature_range_violations": 0,
     "backward_date_order_violations": 0,
-    "multi_day_gaps_after_sorting": 8
+    "multi_day_gaps_after_sorting": 8,
+    "calendar_coverage": {
+      "expected_days": 24837,
+      "observed_days": 24381,
+      "missing_days": 456,
+      "missing_years": [
+        2011
+      ],
+      "max_gap_days": 366,
+      "invalid_dates": 0
+    }
   }
 }

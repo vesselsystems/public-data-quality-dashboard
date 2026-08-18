@@ -18,9 +18,9 @@ The project demonstrates a small SQL-to-Python workflow:
 
 1. Download the public CSV.
 2. Load it into a transient DuckDB relation named `weather_raw`.
-3. Cast the source fields to the normalized schema.
-4. Run quality checks before sorting data for display.
-5. Show the evidence and a descriptive annual summary in Streamlit.
+3. Cast the source fields to the normalized schema while retaining a one-based source row number.
+4. Run source-order, completeness, logic, range, and calendar-coverage checks before sorting data for display.
+5. Show the evidence, a temperature-anomaly review table, and a descriptive annual summary in Streamlit.
 
 ## Measured local snapshot
 
@@ -35,8 +35,10 @@ The following findings were measured from the local `data/raw/seattle_weather.cs
 | Temperature-order violations | 34 rows violate `min <= mean <= max` |
 | Values outside the review range | 0 rows outside -60°C to 60°C |
 | Backward date transitions | 0 in source row order |
-| Calendar coverage caveat | 2011 has no rows; 2000 has 275 rows; 8 gaps longer than one day occur after sorting available dates |
-| Implemented quality score | 71% (5 of 7 checks pass) |
+| Temperature-order anomaly review rows | 34, available in the dashboard review table and CSV download |
+| Calendar coverage | 24,837 expected days; 24,381 present; 456 missing across 8 gaps; 2011 has no rows |
+| Implemented core quality score | 71% (5 of the original 7 checks pass) |
+| Supplemental calendar-coverage check | FAIL: 24,837 expected days; 24,381 present; 456 missing across 8 gaps; 2011 has no rows |
 
 These results are evidence about this local snapshot, not an endorsement of the upstream data. The dashboard still displays descriptive output when checks fail so that the failures remain visible.
 
@@ -67,9 +69,9 @@ ruff check .
 
 ## SQL artifact and relation
 
-`sql/quality_checks.sql` is written for the actual transient relation created by `load_with_sql`: `weather_raw`. The relation keeps the source column names, so each query uses `TRY_CAST` and aliases the fields to the normalized names used in Python. The chronology query uses DuckDB `rowid` (CSV insertion order); ordering by date before that check would hide a source-order problem.
+`sql/quality_checks.sql` is written for the actual transient relation created by `load_with_sql`: `weather_raw`. The relation keeps the source column names, so each query uses `TRY_CAST` and aliases the fields to the normalized names used in Python. The SQL artifact includes the strict calendar-coverage summary and the temperature-order anomaly review query. The chronology query uses DuckDB `rowid` (CSV insertion order); ordering by date before that check would hide a source-order problem.
 
-The SQL file is an auditable artifact, not a standalone database. To run it manually, first create `weather_raw` with the loader's `CREATE TABLE ... read_csv_auto(...)` step in the same DuckDB session; `load_with_sql` closes its own transient connection after returning. The Streamlit app validates source order first and then sorts a display copy by date.
+The SQL file is an auditable artifact, not a standalone database. To run it manually, first create `weather_raw` with the loader's `CREATE TABLE ... read_csv_auto(...)` step in the same DuckDB session; `load_with_sql` closes its own transient connection after returning. The Streamlit app validates source order first, exposes anomaly rows with their one-based source positions, and then sorts a display copy by date.
 
 ## Project structure
 
@@ -78,7 +80,7 @@ The SQL file is an auditable artifact, not a standalone database. To run it manu
 ├── app.py                              # Streamlit dashboard
 ├── data/raw/                           # Downloaded data; ignored by Git
 │   └── provenance.json                 # Tracked source hash and local measurements
-├── docs/data_dictionary.md             # Source and normalized field definitions
+├── docs/data_dictionary.md             # Source, normalized fields, and review rules
 ├── sql/quality_checks.sql              # Auditable checks for weather_raw
 ├── scripts/download_data.py            # Download and provenance entry point
 ├── src/data_quality_dashboard/
@@ -95,19 +97,19 @@ The SQL file is an auditable artifact, not a standalone database. To run it manu
 - Local filename: `data/raw/seattle_weather.csv`
 - Snapshot metadata: [`data/raw/provenance.json`](data/raw/provenance.json)
 
-The download is pinned to Plotly datasets commit `0c447c47b757ad74edecab31f0d72f849d2e67c2`. The local metadata records the downloaded file's SHA-256 hash, retrieval time, byte size, schema, row count, date range, and measured quality observations. The snapshot described by the checked-in metadata has SHA-256 `2837c01b75e4dd0f8bd6810dca805a8ac42a4743bf019128366924ef3f857fdf`.
+The download is pinned to Plotly datasets commit `0c447c47b757ad74edecab31f0d72f849d2e67c2`. The local metadata records the downloaded file's SHA-256 hash, retrieval time, byte size, schema, row count, date range, calendar coverage, and measured quality observations. The snapshot described by the checked-in metadata has SHA-256 `2837c01b75e4dd0f8bd6810dca805a8ac42a4743bf019128366924ef3f857fdf`.
 
-The raw CSV is not tracked to keep the repository small. Check the upstream repository's terms before redistributing the data or presenting results outside this local project.
+The code is MIT-licensed, but the upstream dataset's license or terms have not been independently verified in this project. The provenance file links to the publisher's repository; check its terms before redistributing the data or presenting results outside this local project.
 
 ## Limitations and next steps
 
-- The source has missing numeric values and 34 temperature-order violations; this project does not impute or correct them.
-- Chronology checks detect backward transitions, not complete daily coverage. The measured 2011 gap and shorter 2000 record need a separate decision about missing-period handling.
+- The source has missing numeric values and 34 temperature-order violations. The dashboard exposes those rows for review but does not impute, correct, or exclude them.
+- The strict calendar-coverage check finds 456 missing days across 8 gaps, including the missing 2011 calendar year and a shorter 2000 record. It is shown separately from the historical seven-check score so the score's denominator and meaning do not change silently. The coverage result is evidence about completeness, not a decision to impute missing periods.
 - The range rule is a review threshold, not proof that every value inside it is correct.
 - The source's station, measurement, and revision metadata are not independently validated here.
 - There is no hosted deployment, scheduled refresh, alerting, or operational database.
 
-Planned follow-up work is tracked in [`ROADMAP.md`](ROADMAP.md). A useful next implementation would add an explicit calendar-coverage check and an anomaly review path before any trend is treated as reliable.
+Planned follow-up work is tracked in [`ROADMAP.md`](ROADMAP.md). The current dashboard remains a local descriptive workflow; no trend should be treated as reliable without addressing the documented coverage and source-value issues.
 
 ## License
 
