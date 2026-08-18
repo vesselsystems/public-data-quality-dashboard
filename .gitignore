@@ -9,6 +9,7 @@ __pycache__/
 # Local data and DuckDB files
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/provenance.json
 *.duckdb
 
 # Streamlit

@@ -1,4 +1,4 @@
-"""Streamlit entry point for the portfolio dashboard."""
+"""Streamlit entry point for the data-quality dashboard."""
 
 from pathlib import Path
 
@@ -13,16 +13,18 @@ DATA_PATH = Path(__file__).parent / "data" / "raw" / "seattle_weather.csv"
 st.set_page_config(page_title="Public Data Quality Dashboard", page_icon="📊", layout="wide")
 
 st.title("Public Data Quality & EDA Dashboard")
-st.caption("A SQL-to-Python portfolio project: validate first, interpret second.")
+st.caption("A SQL-to-Python workflow: validate first, interpret second.")
 
 if not DATA_PATH.exists():
     st.error("The dataset has not been downloaded yet.")
     st.code("python scripts/download_data.py")
     st.stop()
 
-frame = load_with_sql(DATA_PATH)
-checks = run_quality_checks(frame)
+source_frame = load_with_sql(DATA_PATH)
+checks = run_quality_checks(source_frame)
 score = quality_score(checks)
+# Keep validation tied to source order, then sort only the display data.
+frame = source_frame.sort_values("date", kind="stable").reset_index(drop=True)
 
 left, middle, right, far_right = st.columns(4)
 left.metric("Quality score", f"{score}%")
@@ -48,7 +50,10 @@ with tab_quality:
         use_container_width=True,
         hide_index=True,
     )
-    st.caption("Checks are implemented in src/data_quality_dashboard/quality.py.")
+    st.caption(
+        "Checks are implemented in src/data_quality_dashboard/quality.py; chronology is checked "
+        "before this display sort."
+    )
 
 with tab_trends:
     st.subheader("Mean temperature over time")
@@ -76,7 +81,7 @@ SELECT
     TRY_CAST(Mean_TemperatureC AS DOUBLE) AS mean_temperature_c,
     TRY_CAST(Min_TemperatureC AS DOUBLE) AS min_temperature_c
 FROM weather_raw
-ORDER BY date;
+ORDER BY rowid;
         """,
         language="sql",
     )

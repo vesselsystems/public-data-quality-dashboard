@@ -1,7 +1,9 @@
 from datetime import date
+from pathlib import Path
 
 import pandas as pd
 
+from data_quality_dashboard.data import load_with_sql
 from data_quality_dashboard.quality import quality_score, run_quality_checks
 
 
@@ -34,6 +36,27 @@ def test_quality_checks_catch_bad_rows() -> None:
 
     assert {"duplicate_dates", "temperature_order", "temperature_range"} <= failed_names
     assert quality_score(checks) < 100
+
+
+def test_sql_loader_preserves_source_order_for_chronology_check(tmp_path: Path) -> None:
+    source = tmp_path / "weather.csv"
+    source.write_text(
+        "Date,Max_TemperatureC,Mean_TemperatureC,Min_TemperatureC\n"
+        "2024-01-02,10,7,4\n"
+        "2024-01-01,12,8,5\n",
+        encoding="utf-8",
+    )
+
+    frame = load_with_sql(source)
+    checks = run_quality_checks(frame)
+    chronology = next(check for check in checks if check.name == "chronological_order")
+
+    assert frame["date"].dt.strftime("%Y-%m-%d").tolist() == [
+        "2024-01-02",
+        "2024-01-01",
+    ]
+    assert chronology.passed is False
+    assert chronology.detail == "1 backward date transitions in source row order."
 
 
 def test_missing_columns_are_reported() -> None:

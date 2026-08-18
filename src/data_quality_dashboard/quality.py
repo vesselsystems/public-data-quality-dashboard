@@ -42,7 +42,10 @@ def run_quality_checks(frame: pd.DataFrame) -> list[QualityCheck]:
     out_of_range = int(
         ((frame[numeric] < -60) | (frame[numeric] > 60)).any(axis=1).sum()
     )
-    date_order_violations = int((frame["date"].diff().dropna() < pd.Timedelta(0)).sum())
+    dates = pd.to_datetime(frame["date"], errors="coerce")
+    date_order_violations = int(
+        dates.diff().lt(pd.Timedelta(0)).fillna(False).sum()
+    )
 
     return [
         QualityCheck(
@@ -78,7 +81,7 @@ def run_quality_checks(frame: pd.DataFrame) -> list[QualityCheck]:
         QualityCheck(
             "chronological_order",
             date_order_violations == 0,
-            f"{date_order_violations:,} date-order violations after SQL ordering.",
+            f"{date_order_violations:,} backward date transitions in source row order.",
         ),
     ]
 

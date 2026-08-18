@@ -1,0 +1,39 @@
+{
+  "source": {
+    "publisher": "Plotly datasets repository",
+    "repository_url": "https://github.com/plotly/datasets",
+    "file": "2016-weather-data-seattle.csv",
+    "url": "https://raw.githubusercontent.com/plotly/datasets/0c447c47b757ad74edecab31f0d72f849d2e67c2/2016-weather-data-seattle.csv",
+    "upstream_ref": "0c447c47b757ad74edecab31f0d72f849d2e67c2",
+    "retrieval_script": "scripts/download_data.py"
+  },
+  "local_snapshot": {
+    "path": "data/raw/seattle_weather.csv",
+    "sha256": "2837c01b75e4dd0f8bd6810dca805a8ac42a4743bf019128366924ef3f857fdf",
+    "size_bytes": 456160,
+    "retrieved_at_utc": "2026-08-18T19:10:46.411065+00:00",
+    "metadata_generated_at_utc": "2026-08-18T19:10:46.482833+00:00",
+    "source_columns": [
+      "Date",
+      "Max_TemperatureC",
+      "Mean_TemperatureC",
+      "Min_TemperatureC"
+    ],
+    "row_count": 24381,
+    "date_min": "1948-01-01",
+    "date_max": "2015-12-31"
+  },
+  "quality_observations": {
+    "missing_values_by_field": {
+      "Date": 0,
+      "Max_TemperatureC": 0,
+      "Mean_TemperatureC": 5,
+      "Min_TemperatureC": 1
+    },
+    "duplicate_dates": 0,
+    "temperature_order_violations": 34,
+    "temperature_range_violations": 0,
+    "backward_date_order_violations": 0,
+    "multi_day_gaps_after_sorting": 8
+  }
+}
