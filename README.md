@@ -38,6 +38,16 @@ pytest
 ruff check .
 ```
 
+## Publish to GitHub
+
+Create an empty repository on GitHub, then run from this directory:
+
+```bash
+git remote add origin https://github.com/<your-user>/<your-repo>.git
+git branch -M main
+git push -u origin main
+```
+
 ## Project structure
 
 ```text
