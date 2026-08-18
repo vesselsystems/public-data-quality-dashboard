@@ -6,7 +6,7 @@ A local Streamlit dashboard for inspecting a public Seattle weather CSV. The pro
 
 ## Status
 
-This is a local Project 1 implementation, not a hosted demo or a production ingestion service. The repository contains the dashboard code, tests, SQL artifact, and reproducibility metadata; no deployment or screenshot is included. The app was smoke-tested over its local Streamlit HTTP endpoint, but the approved Chrome DevTools browser tool was unavailable for this run, so no screenshot is claimed.
+This is a local Project 1 implementation, not a hosted demo or a production ingestion service. The repository contains the dashboard code, tests, SQL artifact, and reproducibility metadata; no deployment or screenshot is included. The app was smoke-tested over its local Streamlit HTTP endpoint, but the approved Chrome DevTools browser tool was unavailable for this run, so no screenshot is claimed. No deployment target or credentials were authorized, so no cloud resource was created; the deployment-ready state is the reproducible local app and CI checks.
 
 The dashboard intentionally reports the source issues it finds instead of silently repairing them. A quality score is a summary of the checks implemented here, not a claim that the source is accurate or fit for operational decisions.
 
