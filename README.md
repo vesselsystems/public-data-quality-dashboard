@@ -10,6 +10,18 @@ This is a local Project 1 implementation, not a hosted demo or a production inge
 
 The dashboard intentionally reports the source issues it finds instead of silently repairing them. A quality score is a summary of the checks implemented here, not a claim that the source is accurate or fit for operational decisions.
 
+## Provenance validation and CI evidence
+
+`data/raw/seattle_weather.csv` is an ignored local file; it is not committed with this repository. The tracked `data/raw/provenance.json` records measurements from the snapshot used for the documented local run, but metadata alone does not prove that the snapshot is present or unchanged in a later checkout.
+
+When the ignored snapshot is available, run the executable validator:
+
+```bash
+python scripts/validate_provenance.py
+```
+
+A matching result is measured local evidence: the validator compares the SHA-256, byte size, CSV header, and recorded row count. A missing snapshot is an explicit failure in the default mode, with instructions to download it; the validator never invents measurements. CI runs the same check with `--allow-missing` because a clean checkout cannot contain ignored raw data. CI therefore reports an unavailable snapshot as an explicit skip, not as evidence that the recorded local measurements were revalidated. Hash, size, or schema mismatches still fail CI.
+
 ## Question and scope
 
 **Question:** What can be responsibly shown from this historical weather file after checking completeness, duplicates, temperature logic, ranges, and source chronology?
@@ -24,7 +36,7 @@ The project demonstrates a small SQL-to-Python workflow:
 
 ## Measured local snapshot
 
-The following findings were measured from the local `data/raw/seattle_weather.csv` used while updating this repository. A later download can change the file; `data/raw/provenance.json` records the snapshot hash and measurements.
+The following findings were measured from the local `data/raw/seattle_weather.csv` used while updating this repository. A later download can change the file; `data/raw/provenance.json` records the snapshot hash and measurements. They are recorded local-snapshot evidence, not measurements performed by CI or a claim about an unavailable raw file.
 
 | Finding | Local measurement |
 |---|---:|
@@ -58,7 +70,11 @@ python scripts/download_data.py
 streamlit run app.py
 ```
 
-The download script writes the raw file (ignored by Git) and updates `data/raw/provenance.json`. Open the local Streamlit URL shown in the terminal.
+The download script writes the raw file (ignored by Git) and updates `data/raw/provenance.json`. Open the local Streamlit URL shown in the terminal. After downloading, validate that the tracked metadata still describes the local file:
+
+```bash
+python scripts/validate_provenance.py
+```
 
 Run the automated checks:
 
@@ -81,10 +97,13 @@ The SQL file is an auditable artifact, not a standalone database. To run it manu
 ├── data/raw/                           # Downloaded data; ignored by Git
 │   └── provenance.json                 # Tracked source hash and local measurements
 ├── docs/data_dictionary.md             # Source, normalized fields, and review rules
+├── docs/provenance.md                   # Local versus CI provenance states
 ├── sql/quality_checks.sql              # Auditable checks for weather_raw
 ├── scripts/download_data.py            # Download and provenance entry point
+├── scripts/validate_provenance.py     # Validate ignored snapshot integrity
 ├── src/data_quality_dashboard/
 │   ├── data.py                         # Download, DuckDB load, metadata, summaries
+│   ├── provenance.py                   # Hash, size, schema, and availability checks
 │   └── quality.py                      # Reusable quality checks
 └── tests/
 ```
@@ -97,7 +116,7 @@ The SQL file is an auditable artifact, not a standalone database. To run it manu
 - Local filename: `data/raw/seattle_weather.csv`
 - Snapshot metadata: [`data/raw/provenance.json`](data/raw/provenance.json)
 
-The download is pinned to Plotly datasets commit `0c447c47b757ad74edecab31f0d72f849d2e67c2`. The local metadata records the downloaded file's SHA-256 hash, retrieval time, byte size, schema, row count, date range, calendar coverage, and measured quality observations. The snapshot described by the checked-in metadata has SHA-256 `2837c01b75e4dd0f8bd6810dca805a8ac42a4743bf019128366924ef3f857fdf`.
+The download is pinned to Plotly datasets commit `0c447c47b757ad74edecab31f0d72f849d2e67c2`. The local metadata records the downloaded file's SHA-256 hash, retrieval time, byte size, schema, row count, date range, calendar coverage, and measured quality observations. The snapshot described by the checked-in metadata has SHA-256 `2837c01b75e4dd0f8bd6810dca805a8ac42a4743bf019128366924ef3f857fdf`. That digest is a recorded measurement until the ignored file is locally available and passes `validate_provenance.py`.
 
 The code is MIT-licensed, but the upstream dataset's license or terms have not been independently verified in this project. The provenance file links to the publisher's repository; check its terms before redistributing the data or presenting results outside this local project.
 
@@ -108,6 +127,7 @@ The code is MIT-licensed, but the upstream dataset's license or terms have not b
 - The range rule is a review threshold, not proof that every value inside it is correct.
 - The source's station, measurement, and revision metadata are not independently validated here.
 - There is no hosted deployment, scheduled refresh, alerting, or operational database.
+- A deterministic diff/freshness check is intentionally not included: the raw snapshot is ignored, and comparing it with a newly downloaded upstream file would depend on network availability, upstream changes, and retrieval time. CI can verify the committed validator and tests, but cannot manufacture a current raw-data diff or freshness result without adding public data to the checkout.
 
 Planned follow-up work is tracked in [`ROADMAP.md`](ROADMAP.md). The current dashboard remains a local descriptive workflow; no trend should be treated as reliable without addressing the documented coverage and source-value issues.
 

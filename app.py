@@ -7,6 +7,7 @@ import plotly.express as px
 import streamlit as st
 
 from data_quality_dashboard.data import load_with_sql, yearly_summary
+from data_quality_dashboard.provenance import ProvenanceMetadataError, validate_provenance
 from data_quality_dashboard.quality import (
     quality_score,
     run_quality_checks,
@@ -39,6 +40,21 @@ with st.sidebar:
 if not DATA_PATH.exists():
     st.error("The dataset has not been downloaded yet.")
     st.code("python scripts/download_data.py")
+    st.stop()
+
+try:
+    provenance_result = validate_provenance(
+        PROVENANCE_PATH,
+        raw_path=DATA_PATH,
+        project_root=PROJECT_ROOT,
+    )
+except ProvenanceMetadataError as error:
+    st.error(f"The tracked provenance metadata is invalid: {error}")
+    st.stop()
+if not provenance_result.passed:
+    detail = "; ".join(provenance_result.errors) or "snapshot measurements do not match"
+    st.error(f"The local snapshot failed provenance validation: {detail}")
+    st.caption("No dashboard analysis is shown until the reviewed snapshot is restored.")
     st.stop()
 
 source_frame = load_with_sql(DATA_PATH)

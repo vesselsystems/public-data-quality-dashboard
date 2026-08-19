@@ -8,7 +8,7 @@
 - Local relation: `weather_raw` in the transient DuckDB connection created by `load_with_sql`
 - Snapshot metadata: [`data/raw/provenance.json`](../data/raw/provenance.json)
 
-The download is pinned to Plotly datasets commit `0c447c47b757ad74edecab31f0d72f849d2e67c2`. The provenance file records the local file hash, retrieval time, and measurements so a later download can be distinguished from the snapshot described here. The upstream license or terms have not been independently verified in this project; consult the publisher's repository before redistribution.
+The download is pinned to Plotly datasets commit `0c447c47b757ad74edecab31f0d72f849d2e67c2`. The provenance file records the local file hash, retrieval time, and measurements so a later download can be distinguished from the snapshot described here. The executable [`validate_provenance.py`](../scripts/validate_provenance.py) compares the tracked hash, byte size, CSV header, and recorded row count with the ignored local file when it is present. A missing file is unavailable evidence, not a passing validation; see [`docs/provenance.md`](provenance.md) for the local-versus-CI states. The upstream license or terms have not been independently verified in this project; consult the publisher's repository before redistribution.
 
 ## Source fields and normalized fields
 
@@ -52,6 +52,10 @@ The chronology rule checks ordering only. It does not treat a missing day or mis
 ## Anomaly review path
 
 The 34 temperature-order violations are exposed by `temperature_order_anomalies` and the dashboard path **Quality checks → Temperature-order anomaly review**. The table includes the source row number, date, three reported temperatures, and the anomaly type; it can be downloaded as CSV. The matching query is in [`sql/quality_checks.sql`](../sql/quality_checks.sql). This is a review path, not an exclusion policy: the project does not silently swap, delete, or impute these rows.
+
+## Provenance interpretation notes
+
+The quality results below describe the local snapshot used to generate the tracked metadata. A clean clone and the CI checkout intentionally do not contain `data/raw/seattle_weather.csv`, so CI uses the validator's explicit `--allow-missing` mode: it can fail malformed metadata or a present-file mismatch, but a skipped snapshot is not current raw-data evidence. The retrieval and metadata timestamps are historical record fields, not deterministic freshness assertions.
 
 ## Interpretation notes
 
