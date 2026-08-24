@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import pandas as pd
 import plotly.express as px
 import streamlit as st
 
@@ -26,14 +27,20 @@ st.caption("A SQL-to-Python workflow: validate first, interpret second.")
 with st.sidebar:
     st.subheader("Snapshot provenance")
     if PROVENANCE_PATH.exists():
-        provenance = json.loads(PROVENANCE_PATH.read_text(encoding="utf-8"))
-        source = provenance["source"]
-        snapshot = provenance["local_snapshot"]
-        st.markdown(f"[{source['publisher']}]({source['url']})")
-        st.caption(f"Upstream revision: `{source['upstream_ref']}`")
-        st.caption(f"SHA-256: `{snapshot['sha256']}`")
-        st.caption(f"Retrieved: {snapshot['retrieved_at_utc'] or 'not recorded'}")
-        st.caption(source["license_or_terms"])
+        try:
+            provenance = json.loads(PROVENANCE_PATH.read_text(encoding="utf-8"))
+            source = provenance["source"]
+            snapshot = provenance["local_snapshot"]
+            if not isinstance(source, dict) or not isinstance(snapshot, dict):
+                raise ValueError("source and local_snapshot must be objects")
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
+            st.warning(f"Provenance metadata cannot be displayed: {error}")
+        else:
+            st.markdown(f"[{source['publisher']}]({source['url']})")
+            st.caption(f"Upstream revision: `{source['upstream_ref']}`")
+            st.caption(f"SHA-256: `{snapshot['sha256']}`")
+            st.caption(f"Retrieved: {snapshot['retrieved_at_utc'] or 'not recorded'}")
+            st.caption(source["license_or_terms"])
     else:
         st.warning("Provenance metadata is not available.")
 
@@ -61,23 +68,36 @@ source_frame = load_with_sql(DATA_PATH)
 checks = run_quality_checks(source_frame)
 anomalies = temperature_order_anomalies(source_frame)
 score = quality_score(checks)
+core_checks = [check for check in checks if check.name != "calendar_coverage"]
+coverage_check = next(check for check in checks if check.name == "calendar_coverage")
 # Keep validation tied to source order, then sort only the display data.
 frame = source_frame.sort_values("date", kind="stable").reset_index(drop=True)
 
 left, middle, right, far_right = st.columns(4)
-left.metric("Core quality score", f"{score}%")
+left.metric(
+    "Core quality score",
+    f"{score}% ({sum(check.passed for check in core_checks)}/{len(core_checks)})",
+)
 middle.metric("Observations", f"{len(frame):,}")
-right.metric("Start date", str(frame["date"].min()))
-far_right.metric("End date", str(frame["date"].max()))
+right.metric("Start date", str(frame["date"].min()) if not frame.empty else "—")
+far_right.metric("End date", str(frame["date"].max()) if not frame.empty else "—")
 
 st.write(
     "The dashboard makes source completeness and analytical assumptions visible before showing "
     "temperature trends."
 )
 st.caption(
-    "The score retains the original seven-check denominator; calendar coverage is a separate "
+    "The score is the historical seven-check summary; calendar coverage is a separate "
     "supplemental check so the score's meaning remains comparable across runs."
 )
+coverage_message = (
+    f"Calendar coverage: {'PASS' if coverage_check.passed else 'FAIL'} — "
+    f"{coverage_check.detail}"
+)
+if coverage_check.passed:
+    st.success(coverage_message)
+else:
+    st.warning(coverage_message)
 
 tab_quality, tab_trends, tab_sql = st.tabs(["Quality checks", "EDA", "SQL summary"])
 
@@ -116,19 +136,37 @@ with tab_quality:
 
 with tab_trends:
     st.subheader("Mean temperature over time")
-    chart = px.line(
-        frame,
-        x="date",
-        y="mean_temperature_c",
-        labels={"date": "Date", "mean_temperature_c": "Mean temperature (°C)"},
-        title="Seattle daily mean temperature",
-    )
-    chart.update_layout(hovermode="x unified")
-    st.plotly_chart(chart, use_container_width=True)
+    if frame.empty:
+        st.warning("No rows are available for a trend or annual summary.")
+    else:
+        # Reindex the display copy to the daily calendar so missing periods are
+        # rendered as gaps rather than an apparently continuous line.
+        chart_source = frame[["date", "mean_temperature_c"]].drop_duplicates(
+            subset=["date"], keep="first"
+        )
+        chart_frame = (
+            chart_source.set_index("date")
+            .reindex(pd.date_range(frame["date"].min(), frame["date"].max(), freq="D"))
+            .rename_axis("date")
+            .reset_index()
+        )
+        chart = px.line(
+            chart_frame,
+            x="date",
+            y="mean_temperature_c",
+            labels={"date": "Date", "mean_temperature_c": "Mean temperature (°C)"},
+            title="Seattle daily mean temperature (observed dates only)",
+        )
+        chart.update_layout(hovermode="x unified")
+        st.plotly_chart(chart, use_container_width=True)
+        st.caption(
+            "Blank intervals represent missing calendar days; the chart does not impute or "
+            "connect those periods. Quality checks and anomaly tables retain source rows."
+        )
 
-    yearly = yearly_summary(frame)
-    st.subheader("Annual summary")
-    st.dataframe(yearly, use_container_width=True, hide_index=True)
+        yearly = yearly_summary(frame)
+        st.subheader("Annual summary")
+        st.dataframe(yearly, use_container_width=True, hide_index=True)
 
 with tab_sql:
     st.subheader("What the SQL layer does")

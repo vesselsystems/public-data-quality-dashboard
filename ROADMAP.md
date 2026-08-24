@@ -19,10 +19,10 @@ Completed in this repository:
 
 The current local snapshot is not fully clean: it contains 6 missing required cells, 34 temperature-order violations, and 456 missing calendar days across 8 gaps. The dashboard surfaces those findings and does not repair or exclude the rows. The strict coverage policy makes the missing 2011 calendar year explicit.
 
-Still open for Project 1:
+Remaining work and explicit non-claims:
 
-- [ ] Review the dashboard output and add a screenshot only if a useful, reproducible view is available
-- [ ] Optionally deploy the local app and document the host, URL, and refresh behavior; no deployment is claimed now
+- [ ] Add a screenshot only when an approved browser tool and a useful, reproducible local view are available; none is claimed in this checkout
+- [ ] Optionally deploy the local app and document the host, URL, and refresh behavior only after a human authorizes that operational work; no deployment is claimed now
 
 ## Next repositories
 
