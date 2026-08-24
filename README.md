@@ -10,6 +10,10 @@ This is a local Project 1 implementation, not a hosted demo or a production inge
 
 The dashboard intentionally reports the source issues it finds instead of silently repairing them. A quality score is a summary of the checks implemented here, not a claim that the source is accurate or fit for operational decisions.
 
+### Current status and remaining work
+
+The local dashboard, quality checks, anomaly review, SQL artifact, tests, and provenance validator are complete for this learning scope. The snapshot still has the documented failures; they are visible rather than repaired. A browser screenshot, hosted deployment, scheduled refresh, and upstream terms review remain optional or human/operational work and are not claimed here.
+
 ## Provenance validation and CI evidence
 
 `data/raw/seattle_weather.csv` is an ignored local file; it is not committed with this repository. The tracked `data/raw/provenance.json` records measurements from the snapshot used for the documented local run, but metadata alone does not prove that the snapshot is present or unchanged in a later checkout.
@@ -82,6 +86,11 @@ Run the automated checks:
 pytest
 ruff check .
 ```
+
+Verification has two evidence boundaries: tests and Ruff run without the raw file, while
+`python scripts/validate_provenance.py` validates the ignored snapshot itself and fails if it is
+missing or differs from the tracked measurements. Neither command proves the upstream dataset's
+license or terms.
 
 ## SQL artifact and relation
 
