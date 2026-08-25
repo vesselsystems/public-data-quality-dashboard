@@ -12,7 +12,7 @@ The dashboard intentionally reports the source issues it finds instead of silent
 
 ### Current status and remaining work
 
-The local dashboard, quality checks, anomaly review, SQL artifact, tests, and provenance validator are complete for this learning scope. The snapshot still has the documented failures; they are visible rather than repaired. A browser screenshot, hosted deployment, scheduled refresh, and upstream terms review remain optional or human/operational work and are not claimed here.
+The local dashboard, quality checks, anomaly review, SQL artifact, tests, and provenance validator are complete for this learning scope. The snapshot still has the documented failures; they are visible rather than repaired. A browser screenshot and hosted deployment remain optional, while the upstream terms review remains unresolved human work; none is claimed here.
 
 ## Provenance validation and CI evidence
 
@@ -25,6 +25,16 @@ python scripts/validate_provenance.py
 ```
 
 A matching result is measured local evidence: the validator compares the SHA-256, byte size, CSV header, and recorded row count. A missing snapshot is an explicit failure in the default mode, with instructions to download it; the validator never invents measurements. CI runs the same check with `--allow-missing` because a clean checkout cannot contain ignored raw data. CI therefore reports an unavailable snapshot as an explicit skip, not as evidence that the recorded local measurements were revalidated. Hash, size, or schema mismatches still fail CI.
+
+## Human review workflow
+
+The tracked human-input decisions are in [`data/reviews/decisions.json`](data/reviews/decisions.json). Reviewer collection, exact evidence fields, and status/audit rules are documented in [`docs/review_workflow.md`](docs/review_workflow.md). Validate this file with:
+
+```bash
+python scripts/validate_reviews.py
+```
+
+Pending items are reported by the validator and are not counted as complete; no pending item is an approval or authorization.
 
 ## Question and scope
 
@@ -80,17 +90,18 @@ The download script writes the raw file (ignored by Git) and updates `data/raw/p
 python scripts/validate_provenance.py
 ```
 
-Run the automated checks:
+Run the automated checks and human-review validator:
 
 ```bash
 pytest
 ruff check .
+python scripts/validate_reviews.py
 ```
 
-Verification has two evidence boundaries: tests and Ruff run without the raw file, while
-`python scripts/validate_provenance.py` validates the ignored snapshot itself and fails if it is
-missing or differs from the tracked measurements. Neither command proves the upstream dataset's
-license or terms.
+Verification has separate evidence boundaries: tests and Ruff run without the raw file, the review
+validator checks only tracked human decisions, and `python scripts/validate_provenance.py` validates
+the ignored snapshot itself and fails if it is missing or differs from the tracked measurements.
+Neither validator proves the upstream dataset's license or terms.
 
 ## SQL artifact and relation
 
@@ -105,11 +116,14 @@ The SQL file is an auditable artifact, not a standalone database. To run it manu
 ├── app.py                              # Streamlit dashboard
 ├── data/raw/                           # Downloaded data; ignored by Git
 │   └── provenance.json                 # Tracked source hash and local measurements
+├── data/reviews/decisions.json         # Pending human-review decisions
 ├── docs/data_dictionary.md             # Source, normalized fields, and review rules
 ├── docs/provenance.md                   # Local versus CI provenance states
+├── docs/review_workflow.md              # Human review collection and audit rules
 ├── sql/quality_checks.sql              # Auditable checks for weather_raw
 ├── scripts/download_data.py            # Download and provenance entry point
 ├── scripts/validate_provenance.py     # Validate ignored snapshot integrity
+├── scripts/validate_reviews.py        # Validate human-review decisions
 ├── src/data_quality_dashboard/
 │   ├── data.py                         # Download, DuckDB load, metadata, summaries
 │   ├── provenance.py                   # Hash, size, schema, and availability checks

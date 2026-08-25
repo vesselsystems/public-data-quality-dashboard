@@ -1,6 +1,7 @@
 """Streamlit entry point for the data-quality dashboard."""
 
 import json
+from collections.abc import Mapping
 from pathlib import Path
 
 import pandas as pd
@@ -19,6 +20,15 @@ PROJECT_ROOT = Path(__file__).parent
 DATA_PATH = PROJECT_ROOT / "data" / "raw" / "seattle_weather.csv"
 PROVENANCE_PATH = PROJECT_ROOT / "data" / "raw" / "provenance.json"
 
+
+def _provenance_display_value(
+    values: Mapping[str, object], key: str, default: str = "not recorded"
+) -> str:
+    """Return a safe text value for an optional provenance display field."""
+    value = values.get(key, default)
+    return value if isinstance(value, str) else default
+
+
 st.set_page_config(page_title="Public Data Quality Dashboard", page_icon="📊", layout="wide")
 
 st.title("Public Data Quality & EDA Dashboard")
@@ -36,11 +46,18 @@ with st.sidebar:
         except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
             st.warning(f"Provenance metadata cannot be displayed: {error}")
         else:
-            st.markdown(f"[{source['publisher']}]({source['url']})")
-            st.caption(f"Upstream revision: `{source['upstream_ref']}`")
-            st.caption(f"SHA-256: `{snapshot['sha256']}`")
-            st.caption(f"Retrieved: {snapshot['retrieved_at_utc'] or 'not recorded'}")
-            st.caption(source["license_or_terms"])
+            publisher = _provenance_display_value(source, "publisher")
+            source_url = _provenance_display_value(source, "url", "#")
+            upstream_ref = _provenance_display_value(source, "upstream_ref")
+            sha256 = _provenance_display_value(snapshot, "sha256")
+            retrieved_at = _provenance_display_value(snapshot, "retrieved_at_utc")
+            license_or_terms = _provenance_display_value(source, "license_or_terms")
+
+            st.markdown(f"[{publisher}]({source_url})")
+            st.caption(f"Upstream revision: `{upstream_ref}`")
+            st.caption(f"SHA-256: `{sha256}`")
+            st.caption(f"Retrieved: {retrieved_at or 'not recorded'}")
+            st.caption(license_or_terms)
     else:
         st.warning("Provenance metadata is not available.")
 

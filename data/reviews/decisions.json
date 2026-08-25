@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "reviews": [
+    {
+      "id": "dataset_terms_legal_review",
+      "question": "Has a human reviewer checked the dataset publisher's applicable terms or license for the intended use, presentation, and any redistribution?",
+      "required": true,
+      "evidence_fields": [
+        "dataset_source_ref",
+        "terms_or_license_ref",
+        "review_scope_ref"
+      ],
+      "status": "pending",
+      "decision": null,
+      "reviewer": null,
+      "reviewed_at_utc": null,
+      "rationale": null,
+      "evidence_refs": {}
+    },
+    {
+      "id": "screenshot_decision",
+      "question": "Should a screenshot of the local dashboard be captured and included in the project materials?",
+      "required": false,
+      "evidence_fields": [
+        "decision_basis_ref",
+        "screenshot_ref_or_rejection_basis_ref"
+      ],
+      "status": "pending",
+      "decision": null,
+      "reviewer": null,
+      "reviewed_at_utc": null,
+      "rationale": null,
+      "evidence_refs": {}
+    },
+    {
+      "id": "deployment_authorization",
+      "question": "Is deployment of the dashboard authorized for the proposed scope, target, and operational access?",
+      "required": false,
+      "evidence_fields": [
+        "authorization_ref",
+        "deployment_scope_ref"
+      ],
+      "status": "pending",
+      "decision": null,
+      "reviewer": null,
+      "reviewed_at_utc": null,
+      "rationale": null,
+      "evidence_refs": {}
+    }
+  ]
+}
